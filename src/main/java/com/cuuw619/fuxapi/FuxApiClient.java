@@ -28,9 +28,10 @@ public final class FuxApiClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, parent) -> new FuxSettingsScreen(parent));
         if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux settings are compatibility-safe and independent.");
     }
+
     @SubscribeEvent public static void registerKeys(RegisterKeyMappingsEvent event) { event.register(OPEN_MENU); }
     @SubscribeEvent public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        while (OPEN_MENU.consumeClick()) if (minecraft.screen == null) minecraft.setScreen(new FuxMenuScreen(null));
+        while (OPEN_MENU.consumeClick()) if (minecraft.screen == null) minecraft.setScreen(new FuxPulseMenuScreen(null));
     }
 }
