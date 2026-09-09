@@ -4,6 +4,7 @@
   "package": "com.cuuw619.fuxapi.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "LoadingOverlayMixin"
+    "LoadingOverlayMixin",
+    "TitleScreenMixin"
   ]
 }
