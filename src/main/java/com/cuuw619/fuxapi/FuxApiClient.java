@@ -20,24 +20,16 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = FuxApi.MOD_ID, value = Dist.CLIENT)
 public final class FuxApiClient {
     public static final String KEY_CATEGORY = "key.categories.fuxapi";
-    public static final KeyMapping OPEN_MENU = new KeyMapping(
-            "key.fuxapi.open_menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, KEY_CATEGORY);
+    public static final KeyMapping OPEN_MENU = new KeyMapping("key.fuxapi.open_menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, KEY_CATEGORY);
 
     public FuxApiClient(ModContainer container) {
         FuxConfig.load();
         FuxSettingsRegistry.load();
-        container.registerExtensionPoint(IConfigScreenFactory.class,
-                (minecraft, parent) -> new FuxMenuScreen(parent));
-        if (ModList.get().isLoaded("sodium")) {
-            FuxApi.LOGGER.info("Sodium detected; Fux settings remain independent and compatibility-safe.");
-        }
+        container.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, parent) -> new FuxSettingsScreen(parent));
+        if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux settings are compatibility-safe and independent.");
     }
-
-    @SubscribeEvent
-    public static void registerKeys(RegisterKeyMappingsEvent event) { event.register(OPEN_MENU); }
-
-    @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    @SubscribeEvent public static void registerKeys(RegisterKeyMappingsEvent event) { event.register(OPEN_MENU); }
+    @SubscribeEvent public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         while (OPEN_MENU.consumeClick()) if (minecraft.screen == null) minecraft.setScreen(new FuxMenuScreen(null));
     }
