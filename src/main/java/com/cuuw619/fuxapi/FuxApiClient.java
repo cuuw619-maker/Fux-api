@@ -1,5 +1,7 @@
 package com.cuuw619.fuxapi;
 
+import com.cuuw619.fuxapi.config.FuxConfig;
+import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -18,35 +20,25 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = FuxApi.MOD_ID, value = Dist.CLIENT)
 public final class FuxApiClient {
     public static final String KEY_CATEGORY = "key.categories.fuxapi";
-
     public static final KeyMapping OPEN_MENU = new KeyMapping(
-            "key.fuxapi.open_menu",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_RIGHT_SHIFT,
-            KEY_CATEGORY
-    );
+            "key.fuxapi.open_menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, KEY_CATEGORY);
 
     public FuxApiClient(ModContainer container) {
+        FuxConfig.load();
+        FuxSettingsRegistry.load();
         container.registerExtensionPoint(IConfigScreenFactory.class,
                 (minecraft, parent) -> new FuxMenuScreen(parent));
-
         if (ModList.get().isLoaded("sodium")) {
-            FuxApi.LOGGER.info("Sodium detected; Fux API menu uses compatibility-safe vanilla GUI hooks.");
+            FuxApi.LOGGER.info("Sodium detected; Fux settings remain independent and compatibility-safe.");
         }
     }
 
     @SubscribeEvent
-    public static void registerKeys(RegisterKeyMappingsEvent event) {
-        event.register(OPEN_MENU);
-    }
+    public static void registerKeys(RegisterKeyMappingsEvent event) { event.register(OPEN_MENU); }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        while (OPEN_MENU.consumeClick()) {
-            if (minecraft.screen == null) {
-                minecraft.setScreen(new FuxMenuScreen(null));
-            }
-        }
+        while (OPEN_MENU.consumeClick()) if (minecraft.screen == null) minecraft.setScreen(new FuxMenuScreen(null));
     }
 }
