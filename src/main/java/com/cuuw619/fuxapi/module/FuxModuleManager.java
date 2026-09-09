@@ -13,8 +13,9 @@ public final class FuxModuleManager {
     public static void init() {
         if (!MODULES.isEmpty()) return;
         MODULES.add(new FuxSprintModule());
-        MODULES.add(new FuxFullbrightModule());
         MODULES.add(new FuxAutoJumpModule());
+        MODULES.add(new FuxFovModule());
+        MODULES.add(new FuxFullbrightModule());
     }
 
     public static List<FuxModule> all() {
@@ -23,6 +24,10 @@ public final class FuxModuleManager {
 
     public static List<FuxModule> byCategory(String category) {
         return MODULES.stream().filter(m -> m.getCategory().equalsIgnoreCase(category)).collect(Collectors.toList());
+    }
+
+    public static FuxModule byName(String name) {
+        return MODULES.stream().filter(m -> m.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
     }
 
     public static void tick() {
