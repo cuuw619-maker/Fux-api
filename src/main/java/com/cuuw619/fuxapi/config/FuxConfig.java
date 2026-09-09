@@ -43,9 +43,9 @@ public final class FuxConfig {
 
     public static final class Data {
         public boolean animations = true;
-        public boolean blur = true;
         public boolean compactMode = false;
         public double uiScale = 1.0;
         public String accent = "PURPLE";
+        public double zoomFov = 25.0;
     }
 }
