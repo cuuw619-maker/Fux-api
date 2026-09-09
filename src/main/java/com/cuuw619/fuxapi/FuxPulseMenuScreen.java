@@ -1,11 +1,13 @@
 package com.cuuw619.fuxapi;
 
 import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
+import com.cuuw619.fuxapi.module.FuxModule;
+import com.cuuw619.fuxapi.module.FuxModuleManager;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Pulse-inspired visual shell. Gameplay modules are intentionally not registered yet. */
+/** Pulse-inspired client cheat menu. */
 public final class FuxPulseMenuScreen extends Screen {
     private static final int W = 820, H = 480, SIDE = 168;
     private static final String[] CATS = {"Combat", "Movement", "Player", "Render", "World", "Misc", "Settings"};
@@ -42,18 +44,44 @@ public final class FuxPulseMenuScreen extends Screen {
     private void drawMain(GuiGraphics g, int mx, int my) {
         int left = x + SIDE + 26, top = y + 20, right = x + W - 26;
         g.drawString(font, CATS[category], left, top, 0xFFFFFFFF, false);
-        g.drawString(font, "Fux API interface", left, top + 18, 0xFF666B76, false);
+        g.drawString(font, category == 6 ? "Interface settings" : "Client modules", left, top + 18, 0xFF666B76, false);
         int close = right - 22;
         g.fill(close, y + 15, close + 22, y + 37, inside(mx, my, close, y + 15, 22, 22) ? 0xFF30232A : 0xFF1E2229);
         g.drawCenteredString(font, Component.literal("×"), close + 11, y + 20, 0xFFE1E2E7);
         int cardY = y + 70, cw = right - left;
         if (category == 6) drawSettings(g, left, cardY, cw, mx, my);
-        else {
-            g.fill(left, cardY, right, y + H - 28, 0xFF15181F);
-            g.fill(left, cardY, right, cardY + 1, 0xFF252A34);
-            g.drawString(font, "No modules registered", left + 18, cardY + 20, 0xFFD9DBE1, false);
-            g.drawString(font, "Module slots are ready for the next stage.", left + 18, cardY + 40, 0xFF666B76, false);
+        else drawModules(g, left, cardY, cw, mx, my);
+    }
+
+    private void drawModules(GuiGraphics g, int x, int y, int w, int mx, int my) {
+        var modules = FuxModuleManager.byCategory(CATS[category]);
+        if (modules.isEmpty()) {
+            g.fill(x, y, x + w, y + H - 98, 0xFF15181F);
+            g.drawString(font, "No modules registered", x + 18, y + 20, 0xFFD9DBE1, false);
+            g.drawString(font, "This category is reserved for the next module stage.", x + 18, y + 40, 0xFF666B76, false);
+            return;
         }
+        for (int i = 0; i < modules.size(); i++) {
+            FuxModule module = modules.get(i);
+            int cy = y + i * 54;
+            boolean hover = inside(mx, my, x, cy, w, 46);
+            g.fill(x, cy, x + w, cy + 46, hover ? 0xFF20242D : 0xFF181B22);
+            if (module.isEnabled()) g.fill(x, cy, x + 3, cy + 46, accent());
+            g.drawString(font, module.getName(), x + 14, cy + 9, 0xFFE2E3E8, false);
+            g.drawString(font, description(module), x + 14, cy + 26, 0xFF626773, false);
+            int sx = x + w - 48;
+            g.fill(sx, cy + 15, sx + 34, cy + 31, module.isEnabled() ? accent() : 0xFF30343D);
+            g.fill(module.isEnabled() ? sx + 20 : sx + 2, cy + 17, module.isEnabled() ? sx + 31 : sx + 13, cy + 29, 0xFFEDEEF2);
+        }
+    }
+
+    private String description(FuxModule module) {
+        return switch (module.getName()) {
+            case "Sprint" -> "Automatically keeps sprint active while moving forward.";
+            case "Fullbright" -> "Raises client gamma while enabled.";
+            case "AutoJump" -> "Enables Minecraft automatic jumping.";
+            default -> "Client module";
+        };
     }
 
     private void drawSettings(GuiGraphics g, int x, int y, int w, int mx, int my) {
@@ -80,9 +108,21 @@ public final class FuxPulseMenuScreen extends Screen {
         if (button != 0) return super.mouseClicked(mx, my, button);
         if (inside(mx, my, x + W - 48, y + 15, 22, 22)) { onClose(); return true; }
         if (inside(mx, my, x, y, W, 54)) { dragging = true; ox = mx - x; oy = my - y; return true; }
-        for (int i = 0; i < CATS.length; i++) { int cy = y + 78 + i * 44; if (inside(mx, my, x + 10, cy, SIDE - 20, 34)) { category = i; return true; } }
+        for (int i = 0; i < CATS.length; i++) {
+            int cy = y + 78 + i * 44;
+            if (inside(mx, my, x + 10, cy, SIDE - 20, 34)) { category = i; return true; }
+        }
+        if (category < 6) {
+            var modules = FuxModuleManager.byCategory(CATS[category]);
+            int left = x + SIDE + 26, top = y + 70, right = x + W - 26;
+            for (int i = 0; i < modules.size(); i++) {
+                int cy = top + i * 54;
+                if (inside(mx, my, left, cy, right - left, 46)) { modules.get(i).toggle(); return true; }
+            }
+        }
         return super.mouseClicked(mx, my, button);
     }
+
     @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (dragging && button == 0) { x = clamp((int)(mx - ox), 8, Math.max(8, width - W - 8)); y = clamp((int)(my - oy), 8, Math.max(8, height - H - 8)); return true; }
         return super.mouseDragged(mx, my, button, dx, dy);
