@@ -2,6 +2,7 @@ package com.cuuw619.fuxapi;
 
 import com.cuuw619.fuxapi.config.FuxConfig;
 import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
+import com.cuuw619.fuxapi.module.FuxModuleManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -25,13 +26,18 @@ public final class FuxApiClient {
     public FuxApiClient(ModContainer container) {
         FuxConfig.load();
         FuxSettingsRegistry.load();
+        FuxModuleManager.init();
         container.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, parent) -> new FuxSettingsScreen(parent));
         if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux settings are compatibility-safe and independent.");
     }
 
     @SubscribeEvent public static void registerKeys(RegisterKeyMappingsEvent event) { event.register(OPEN_MENU); }
+
     @SubscribeEvent public static void onClientTick(ClientTickEvent.Post event) {
+        FuxModuleManager.tick();
         Minecraft minecraft = Minecraft.getInstance();
-        while (OPEN_MENU.consumeClick()) if (minecraft.screen == null) minecraft.setScreen(new FuxPulseMenuScreen(null));
+        while (OPEN_MENU.consumeClick()) {
+            if (minecraft.screen == null) minecraft.setScreen(new FuxPulseMenuScreen(null));
+        }
     }
 }
