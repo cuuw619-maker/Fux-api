@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="fuxapi"
+version="0.1.0"
+displayName="Fux API"
+description='''
+Fux API client-side base and configurable menu framework for Minecraft 1.21.1 NeoForge.
+'''
+
+[[dependencies.fuxapi]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.250,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.fuxapi]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1]"
+ordering="NONE"
+side="CLIENT"
