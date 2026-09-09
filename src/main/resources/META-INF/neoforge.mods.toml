@@ -7,8 +7,11 @@ modId="fuxapi"
 version="0.1.0"
 displayName="Fux API"
 description='''
-Fux API client-side base and configurable menu framework for Minecraft 1.21.1 NeoForge.
+Fux API client-side base and configurable cheat menu framework for Minecraft 1.21.1 NeoForge.
 '''
+
+[[mixins]]
+config="fuxapi.mixins.json"
 
 [[dependencies.fuxapi]]
 modId="neoforge"
