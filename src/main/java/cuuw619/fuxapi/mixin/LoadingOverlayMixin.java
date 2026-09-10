@@ -1,7 +1,7 @@
 package com.cuuw619.fuxapi.mixin;
 
-import com.cuuw619.fuxapi.FuxSettingsRegistry;
 import com.cuuw619.fuxapi.FuxUiAnimation;
+import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LoadingOverlay;
@@ -18,13 +18,9 @@ public abstract class LoadingOverlayMixin {
     private void fux$replaceVanillaLoader(GuiGraphics g, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         long elapsed = System.currentTimeMillis() - START;
         float t = elapsed / 1000.0F;
-        int width = g.guiWidth();
-        int height = g.guiHeight();
-        int cx = width / 2;
-        int cy = height / 2;
+        int width = g.guiWidth(), height = g.guiHeight();
+        int cx = width / 2, cy = height / 2;
         int accent = accent();
-
-        // Do not let the vanilla Mojang red surface render at all.
         g.fill(0, 0, width, height, 0xFF020204);
         renderBackground(g, width, height, t, accent);
         renderRings(g, cx, cy, t, accent);
@@ -79,8 +75,7 @@ public abstract class LoadingOverlayMixin {
 
     private static void renderProgress(GuiGraphics g, int cx, int cy, int width, float t, int accent) {
         int barWidth = Math.min(340, Math.max(180, width / 3));
-        int x = cx - barWidth / 2;
-        int y = cy + 50;
+        int x = cx - barWidth / 2, y = cy + 50;
         float target = 0.12F + 0.78F * (0.5F + 0.5F * (float) Math.sin(t * 1.15F));
         float progress = FuxUiAnimation.easeOutCubic(target);
         int filled = Math.max(2, Math.round(barWidth * progress));
