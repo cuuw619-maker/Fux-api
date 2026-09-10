@@ -30,6 +30,7 @@ public final class FuxApiClient {
     public FuxApiClient(ModContainer container) {
         FuxConfig.load();
         FuxSettingsRegistry.load();
+        FuxHudLayout.load();
         FuxModuleManager.init();
         container.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, parent) -> new FuxSettingsScreen(parent));
         if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux settings are compatibility-safe and independent.");
