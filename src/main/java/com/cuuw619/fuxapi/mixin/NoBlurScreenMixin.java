@@ -1,6 +1,5 @@
 package com.cuuw619.fuxapi.mixin;
 
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Screen.class)
 public abstract class NoBlurScreenMixin {
     @Inject(method = "renderBlurredBackground", at = @At("HEAD"), cancellable = true)
-    private void fux$disableBlur(GuiGraphics graphics, CallbackInfo ci) {
+    private void fux$disableBlur(float partialTick, CallbackInfo ci) {
         ci.cancel();
     }
 }
