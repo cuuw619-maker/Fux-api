@@ -50,6 +50,8 @@ neoForge {
 }
 
 sourceSets.main.resources.srcDir('src/generated/resources')
+// Keep the legacy duplicate source tree in the repository, but do not compile it.
+sourceSets.main.java.exclude('cuuw619/**')
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
