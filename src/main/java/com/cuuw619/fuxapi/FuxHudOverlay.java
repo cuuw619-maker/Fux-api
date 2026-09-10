@@ -69,8 +69,9 @@ public final class FuxHudOverlay {
 
     private static LivingEntity findTarget(LocalPlayer player) {
         LivingEntity best=null;double bestDistance=64.0D;
-        for(Entity entity:player.level().entitiesForRendering()){
-            if(!(entity instanceof LivingEntity living)||living==player||!living.isAlive())continue;
+        for(LivingEntity living:player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(8.0D))){
+            Entity entity = living;
+            if(entity==player||!living.isAlive())continue;
             double distance=player.distanceToSqr(living);if(distance<bestDistance){bestDistance=distance;best=living;}
         }
         return best;
