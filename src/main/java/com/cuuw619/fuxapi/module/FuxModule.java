@@ -6,8 +6,13 @@ public abstract class FuxModule {
     private boolean enabled;
 
     protected FuxModule(String name, String category) {
+        this(name, category, false);
+    }
+
+    protected FuxModule(String name, String category, boolean enabled) {
         this.name = name;
         this.category = category;
+        this.enabled = enabled;
     }
 
     public final String getName() { return name; }
