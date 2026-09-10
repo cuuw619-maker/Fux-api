@@ -25,6 +25,7 @@ public final class FuxApiClient {
     public static final KeyMapping ZOOM = new KeyMapping("key.fuxapi.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, KEY_CATEGORY);
 
     private static float zoomCurrent = 1.0F;
+    private static float zoomTarget = 1.0F;
     private static int zoomBaseFov = -1;
 
     public FuxApiClient(ModContainer container) {
@@ -33,7 +34,7 @@ public final class FuxApiClient {
         FuxHudLayout.load();
         FuxModuleManager.init();
         container.registerExtensionPoint(IConfigScreenFactory.class, (minecraft, parent) -> new FuxSettingsScreen(parent));
-        if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux settings are compatibility-safe and independent.");
+        if (ModList.get().isLoaded("sodium")) FuxApi.LOGGER.info("Sodium detected; Fux visual layer enabled.");
     }
 
     @SubscribeEvent public static void registerKeys(RegisterKeyMappingsEvent event) {
@@ -43,29 +44,38 @@ public final class FuxApiClient {
 
     @SubscribeEvent public static void onClientTick(ClientTickEvent.Post event) {
         FuxModuleManager.tick();
-        Minecraft minecraft = Minecraft.getInstance();
-        while (OPEN_MENU.consumeClick()) {
-            if (minecraft.screen == null) minecraft.setScreen(new FuxPulseMenuScreen(null));
-        }
-        updateZoom(minecraft);
+        Minecraft mc = Minecraft.getInstance();
+        while (OPEN_MENU.consumeClick()) if (mc.screen == null) mc.setScreen(new FuxPulseMenuScreen(null));
+        updateZoom(mc);
+    }
+
+    public static void onMouseZoom(double wheel) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null) return;
+        if (zoomBaseFov < 0) zoomBaseFov = mc.options.fov().get();
+        zoomTarget = clamp(zoomTarget - (float) wheel * 0.055F, 0.20F, 1.0F);
     }
 
     private static void updateZoom(Minecraft mc) {
         if (mc.player == null || mc.options == null) return;
-        boolean active = ZOOM.isDown() && mc.screen == null;
-        int normal = zoomBaseFov >= 0 ? zoomBaseFov : mc.options.fov().get();
-        if (active && zoomBaseFov < 0) zoomBaseFov = mc.options.fov().get();
-        if (!active && zoomBaseFov < 0) return;
-        normal = zoomBaseFov >= 0 ? zoomBaseFov : normal;
-        float target = active ? (float) (FuxSettingsRegistry.ZOOM_FOV.get() / Math.max(1.0, normal)) : 1.0F;
-        if (!FuxSettingsRegistry.ANIMATIONS.get()) zoomCurrent = target;
-        else zoomCurrent += (target - zoomCurrent) * 0.22F;
-        int nextFov = Math.max(10, Math.min(normal, Math.round(normal * zoomCurrent)));
-        mc.options.fov().set(nextFov);
-        if (!active && Math.abs(zoomCurrent - 1.0F) < 0.01F) {
-            mc.options.fov().set(normal);
-            zoomCurrent = 1.0F;
-            zoomBaseFov = -1;
+        boolean key = ZOOM.isDown() && mc.screen == null;
+        if (key && zoomBaseFov < 0) zoomBaseFov = mc.options.fov().get();
+        if (key) zoomTarget = (float) (FuxSettingsRegistry.ZOOM_FOV.get() / Math.max(1.0, zoomBaseFov));
+        if (!key && zoomBaseFov >= 0 && zoomTarget >= 0.999F) {
+            zoomTarget = 1.0F;
+        }
+        float factor = FuxSettingsRegistry.ANIMATIONS.get() ? 0.105F : 1.0F;
+        zoomCurrent += (zoomTarget - zoomCurrent) * factor;
+        if (zoomBaseFov >= 0) {
+            int normal = zoomBaseFov;
+            mc.options.fov().set(Math.max(10, Math.min(normal, Math.round(normal * zoomCurrent))));
+            if (!key && zoomTarget >= 0.999F && Math.abs(zoomCurrent - 1.0F) < 0.002F) {
+                mc.options.fov().set(normal);
+                zoomCurrent = zoomTarget = 1.0F;
+                zoomBaseFov = -1;
+            }
         }
     }
+
+    private static float clamp(float value, float min, float max) { return Math.max(min, Math.min(max, value)); }
 }
