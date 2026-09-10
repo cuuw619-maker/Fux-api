@@ -1,6 +1,7 @@
 package com.cuuw619.fuxapi;
 
 import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
+import com.cuuw619.fuxapi.module.FuxModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -21,21 +22,19 @@ public final class FuxHudOverlay {
     private static boolean yawReady;
     private static float targetAlpha;
     private static float targetScale = 1.0F;
-    private static LivingEntity currentTarget;
     private FuxHudOverlay() {}
 
     @SubscribeEvent
     public static void render(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance(); LocalPlayer player = mc.player;
         if (player == null || mc.options.hideGui || mc.screen != null) return;
-        GuiGraphics g = event.getGuiGraphics(); int width = g.guiWidth(), height = g.guiHeight(), accent = accent();
+        GuiGraphics g = event.getGuiGraphics(); int width = g.guiWidth(), accent = accent();
         float target = player.getYRot();
         if (!yawReady) { smoothYaw = target; yawReady = true; }
         else smoothYaw = FuxUiAnimation.smoothDamp(smoothYaw, smoothYaw + shortest(target - smoothYaw), 0.11F);
-
-        drawCompass(g, Math.round(FuxHudLayout.data().compassX * width), Math.round(FuxHudLayout.data().compassY * height), width, smoothYaw, accent);
-        drawInfo(g, Math.round(FuxHudLayout.data().infoX * width), Math.round(FuxHudLayout.data().infoY * height), mc, accent);
-        drawTarget(g, width, height, player, accent);
+        drawCompass(g, Math.round(FuxHudLayout.data().compassX * width), Math.round(FuxHudLayout.data().compassY * g.guiHeight()), width, smoothYaw, accent);
+        drawInfo(g, Math.round(FuxHudLayout.data().infoX * width), Math.round(FuxHudLayout.data().infoY * g.guiHeight()), mc, accent);
+        if (FuxModuleManager.byName("Target ESP") != null && FuxModuleManager.byName("Target ESP").isEnabled()) drawTarget(g, width, g.guiHeight(), player, accent);
     }
 
     private static void drawCompass(GuiGraphics g, int center, int top, int width, float yaw, int accent) {
@@ -61,36 +60,24 @@ public final class FuxHudOverlay {
         LivingEntity target = findTarget(player);
         targetAlpha = FuxUiAnimation.smoothDamp(targetAlpha, target == null ? 0.0F : 1.0F, 0.16F);
         targetScale = FuxUiAnimation.smoothDamp(targetScale, target == null ? 0.96F : 1.0F, 0.12F);
-        if (target == null || targetAlpha < 0.02F) { currentTarget = null; return; }
-        currentTarget = target;
-        int cx = Math.round(FuxHudLayout.data().targetEspX * width), cy = Math.round(FuxHudLayout.data().targetEspY * height);
-        int box = Math.round(42 * targetScale);
-        int alpha = Math.max(0, Math.min(255, Math.round(210 * targetAlpha)));
-        int col = (alpha << 24) | (accent & 0x00FFFFFF);
-        g.fill(cx - box, cy - box, cx - box + 2, cy + box, col);
-        g.fill(cx + box - 2, cy - box, cx + box, cy + box, col);
-        g.fill(cx - box, cy - box, cx + box, cy - box + 2, col);
-        g.fill(cx - box, cy + box - 2, cx + box, cy + box, col);
-        String name = target.getName().getString();
-        if (name.length() > 18) name = name.substring(0, 18);
-        int textAlpha = Math.max(0, Math.min(255, Math.round(235 * targetAlpha)));
-        g.drawCenteredString(Minecraft.getInstance().font, name, cx, cy + box + 6, (textAlpha << 24) | 0x00FFFFFF);
+        if (target == null || targetAlpha < 0.02F) return;
+        int cx = Math.round(FuxHudLayout.data().targetEspX * width), cy = Math.round(FuxHudLayout.data().targetEspY * height), box = Math.round(42 * targetScale);
+        int alpha = Math.max(0, Math.min(255, Math.round(210 * targetAlpha))); int col = (alpha << 24) | (accent & 0x00FFFFFF);
+        g.fill(cx - box, cy - box, cx - box + 2, cy + box, col);g.fill(cx + box - 2, cy - box, cx + box, cy + box, col);g.fill(cx - box, cy - box, cx + box, cy - box + 2, col);g.fill(cx - box, cy + box - 2, cx + box, cy + box, col);
+        String name = target.getName().getString();if(name.length()>18)name=name.substring(0,18);int ta=Math.max(0,Math.min(255,Math.round(235*targetAlpha)));g.drawCenteredString(Minecraft.getInstance().font,name,cx,cy+box+6,(ta<<24)|0x00FFFFFF);
     }
 
     private static LivingEntity findTarget(LocalPlayer player) {
-        if (player.level() == null) return null;
-        LivingEntity best = null; double bestDistance = 8.0 * 8.0;
-        for (Entity entity : player.level().entitiesForRendering()) {
-            if (!(entity instanceof LivingEntity living) || living == player || !living.isAlive()) continue;
-            double distance = player.distanceToSqr(living);
-            if (distance < bestDistance) { bestDistance = distance; best = living; }
+        LivingEntity best=null;double bestDistance=64.0D;
+        for(Entity entity:player.level().entitiesForRendering()){
+            if(!(entity instanceof LivingEntity living)||living==player||!living.isAlive())continue;
+            double distance=player.distanceToSqr(living);if(distance<bestDistance){bestDistance=distance;best=living;}
         }
         return best;
     }
-
-    private static int accent() { return switch (FuxSettingsRegistry.ACCENT.get()) { case "BLUE" -> 0xFF4F8CFF; case "GREEN" -> 0xFF45C98A; default -> 0xFF8B5CF6; }; }
-    private static float normalize(float d) { d %= 360f; return d < 0 ? d + 360 : d; }
-    private static float shortest(float d) { d %= 360f; if (d > 180) d -= 360; if (d < -180) d += 360; return d; }
-    private static String directionFor(float h) { return switch (Math.floorMod(Math.round(normalize(h) / 45f), 8)) { case 0 -> "S"; case 1 -> "SW"; case 2 -> "W"; case 3 -> "NW"; case 4 -> "N"; case 5 -> "NE"; case 6 -> "E"; default -> "SE"; }; }
-    private static boolean isCardinal(String s) { return s.length() == 1; }
+    private static int accent(){return switch(FuxSettingsRegistry.ACCENT.get()){case "BLUE"->0xFF4F8CFF;case "GREEN"->0xFF45C98A;default->0xFF8B5CF6;};}
+    private static float normalize(float d){d%=360f;return d<0?d+360:d;}
+    private static float shortest(float d){d%=360f;if(d>180)d-=360;if(d<-180)d+=360;return d;}
+    private static String directionFor(float h){return switch(Math.floorMod(Math.round(normalize(h)/45f),8)){case 0->"S";case 1->"SW";case 2->"W";case 3->"NW";case 4->"N";case 5->"NE";case 6->"E";default->"SE";};}
+    private static boolean isCardinal(String s){return s.length()==1;}
 }
