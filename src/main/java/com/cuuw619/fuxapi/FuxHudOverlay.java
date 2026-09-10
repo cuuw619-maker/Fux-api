@@ -1,5 +1,6 @@
 package com.cuuw619.fuxapi;
 
+import com.cuuw619.fuxapi.config.FuxSettingsRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,95 +15,34 @@ import java.time.format.DateTimeFormatter;
 @EventBusSubscriber(modid = FuxApi.MOD_ID, value = Dist.CLIENT)
 public final class FuxHudOverlay {
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm:ss");
-
+    private static float smoothYaw;
+    private static boolean yawReady;
     private FuxHudOverlay() {}
 
     @SubscribeEvent
     public static void render(RenderGuiEvent.Post event) {
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
+        Minecraft mc = Minecraft.getInstance(); LocalPlayer player = mc.player;
         if (player == null || mc.options.hideGui || mc.screen != null) return;
-
-        GuiGraphics g = event.getGuiGraphics();
-        int width = g.guiWidth();
-        int accent = 0xFF8B5CF6;
-        int center = width / 2;
-
-        drawCompass(g, center, 18, width, player.getYRot(), accent);
-        drawInfo(g, width - 14, 18, mc, accent);
+        GuiGraphics g=event.getGuiGraphics(); int width=g.guiWidth(), accent=accent();
+        float target=player.getYRot(); if(!yawReady){smoothYaw=target;yawReady=true;} else smoothYaw += shortest(target-smoothYaw)*0.16F;
+        drawCompass(g,width/2,16,width,smoothYaw,accent); drawInfo(g,width-14,16,mc,accent);
     }
 
-    private static void drawCompass(GuiGraphics g, int center, int top, int width, float yaw, int accent) {
-        int compassWidth = Math.min(720, width - 80);
-        int left = center - compassWidth / 2;
-        int right = center + compassWidth / 2;
-        int height = 48;
-
-        g.fill(left + 4, top + 5, right + 4, top + height + 5, 0x50000000);
-        g.fill(left, top, right, top + height, 0xC20A0D12);
-        g.fill(left, top, right, top + 2, accent);
-        g.fill(center - 1, top + 5, center + 1, top + height - 5, accent);
-
-        float degreesPerPixel = 180.0F / compassWidth;
-        float centerHeading = normalize(yaw);
-        for (int deg = -180; deg <= 180; deg += 10) {
-            float heading = centerHeading + deg;
-            float delta = shortest(heading - centerHeading);
-            int x = center + Math.round(delta / degreesPerPixel);
-            if (x < left + 5 || x > right - 5) continue;
-            boolean major = deg % 30 == 0;
-            int tick = major ? 12 : 7;
-            g.fill(x, top + height - tick - 4, x + 1, top + height - 4, major ? accent : 0xFF59606C);
-            if (major) {
-                String label = directionFor(heading);
-                int color = isCardinal(label) ? 0xFFF1F2F5 : 0xFF9CA2AD;
-                g.drawCenteredString(Minecraft.getInstance().font, label, x, top + 8, color);
-            }
-        }
-        g.drawCenteredString(Minecraft.getInstance().font, "▼", center, top + height - 8, 0xFFFFFFFF);
+    private static void drawCompass(GuiGraphics g,int center,int top,int width,float yaw,int accent){
+        int cw=Math.min(720,width-80), left=center-cw/2,right=center+cw/2,height=42; float dpp=180f/cw, heading=normalize(yaw);
+        // Deliberately no panel, background, border or outline: only the compass itself is drawn.
+        for(int deg=-180;deg<=180;deg+=10){float delta=shortest((heading+deg)-heading);int x=center+Math.round(delta/dpp);if(x<left||x>right)continue;boolean major=deg%30==0;int tick=major?11:6;g.fill(x,top+height-tick,x+1,top+height,major?accent:0xFF666B76);if(major){String label=directionFor(heading+deg);g.drawCenteredString(Minecraft.getInstance().font,label,x,top+4,isCardinal(label)?0xFFFFFFFF:0xFF9DA2AC);}}
+        g.fill(center-1,top+18,center+1,top+height,accent);g.drawCenteredString(Minecraft.getInstance().font,"▼",center,top+height-4,0xFFFFFFFF);
     }
 
-    private static void drawInfo(GuiGraphics g, int right, int top, Minecraft mc, int accent) {
-        String fps = mc.getFps() + " FPS";
-        String time = LocalTime.now().format(CLOCK);
-        int boxW = 108;
-        int x = right - boxW;
-
-        g.fill(x + 4, top + 4, right + 4, top + 70, 0x50000000);
-        g.fill(x, top, right, top + 66, 0xC20A0D12);
-        g.fill(x, top, x + 3, top + 66, accent);
-        g.drawString(mc.font, fps, x + 12, top + 12, 0xFFE8E9ED, false);
-        g.drawString(mc.font, time, x + 12, top + 31, accent, false);
-        g.drawString(mc.font, "SYSTEM", x + 12, top + 49, 0xFF6E7480, false);
+    private static void drawInfo(GuiGraphics g,int right,int top,Minecraft mc,int accent){
+        // Raw text only: no box, backdrop, border or outline.
+        g.drawString(mc.font,mc.getFps()+" FPS",right-66,top+4,0xFFE8E9ED,false);
+        g.drawString(mc.font,LocalTime.now().format(CLOCK),right-66,top+20,accent,false);
     }
-
-    private static float normalize(float degrees) {
-        degrees %= 360.0F;
-        return degrees < 0 ? degrees + 360.0F : degrees;
-    }
-
-    private static float shortest(float degrees) {
-        degrees %= 360.0F;
-        if (degrees > 180.0F) degrees -= 360.0F;
-        if (degrees < -180.0F) degrees += 360.0F;
-        return degrees;
-    }
-
-    private static String directionFor(float heading) {
-        int sector = Math.floorMod(Math.round(normalize(heading) / 45.0F), 8);
-        return switch (sector) {
-            case 0 -> "S";
-            case 1 -> "SW";
-            case 2 -> "W";
-            case 3 -> "NW";
-            case 4 -> "N";
-            case 5 -> "NE";
-            case 6 -> "E";
-            default -> "SE";
-        };
-    }
-
-    private static boolean isCardinal(String label) {
-        return label.length() == 1;
-    }
+    private static int accent(){return switch(FuxSettingsRegistry.ACCENT.get()){case "BLUE"->0xFF4F8CFF;case "GREEN"->0xFF45C98A;default->0xFF8B5CF6;};}
+    private static float normalize(float d){d%=360f;return d<0?d+360:d;}
+    private static float shortest(float d){d%=360f;if(d>180)d-=360;if(d<-180)d+=360;return d;}
+    private static String directionFor(float h){return switch(Math.floorMod(Math.round(normalize(h)/45f),8)){case 0->"S";case 1->"SW";case 2->"W";case 3->"NW";case 4->"N";case 5->"NE";case 6->"E";default->"SE";};}
+    private static boolean isCardinal(String s){return s.length()==1;}
 }
